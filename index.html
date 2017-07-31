@@ -19,10 +19,24 @@
         <![endif]-->
 
         <!-- Add your site or application content here -->
-        <h1>Remote UI</h1>
-        <div id="controls"></div>
+        <div class="header">
+            <div class="title">REMOTE UI</div>
+            <div class="status-box">
+                    <!--<div class="check mark">✔</div>
+                    <div class="x mark">✗</div>-->
+                    <span id="status-label"></span>
+                <form id="host-form">
+                    <input id="host-field" value="localhost:53421" placeholder="host"></input>
+                </form>
+            </div>
+        </div>
+        <div id="controls">
+            <div id="controls-placeholder">
+                No Connection.
+            </div>
+        </div>
 
-        <script src="js/dat.gui.min.js"></script>
+        <script src="js/dat.gui/build/dat.gui.js"></script>
         <script src="js/remote-ui.js"></script>
     </body>
 </html>

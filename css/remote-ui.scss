@@ -2,17 +2,97 @@
 
 $side-spacing: 30px;
 
+$back:  #303030;
+$wells: #202020;
+
+$success: #33aa33;
+$error: #aa3333;
+
 body {
-  background-color: #303030;
-  color: #fafafa;
-  margin-left:  $side-spacing;
-  margin-right: $side-spacing;
+  background-color: $back;
+  color:            #fafafa;
+  margin-left:      $side-spacing;
+  margin-right:     $side-spacing;
+  font-family:      "Helvetica";
+  font-weight:      300;
+  font-size:        16px;
 }
 
+
+.header {
+
+    background-color: $wells;
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px;
+
+    $vertical-margin: 10px;
+    margin-top: $vertical-margin;
+    margin-bottom: $vertical-margin;
+
+    .title {
+        font-size:      2em;
+        padding-top:    .5em;
+        padding-bottom: .5em;
+        letter-spacing: 0.3em;
+    }
+
+    .status-box {
+        box-sizing: border-box;
+        border-color: white;
+        text-align: right;
+        padding: 1em;
+        background-color: $wells;
+        height: 100%;
+    }
+
+    .status-label {
+        border-radius: 3px;
+        padding: 15px;
+    }
+
+    .mark {
+        padding: .4em;
+        width: .8em;
+        height: .8em;
+        font-size: 1em;
+        text-align: center;
+        border-radius: 1em;
+        color: $wells;
+        display: inline-block;
+    }
+
+    .check {
+        background-color: $success;
+    }
+
+    .x {
+        background-color: $error;
+    }
+
+    #host-field {
+        margin-top: 10px;
+        padding: 3px;
+        background-color: black;
+    }
+
+}
+
+
 #controls {
-  background-color: #202020;
-  width: 100%;
-  height: 75vh;
+  background-color: $wells;
+  width:  100%;
+}
+
+#controls-placeholder {
+    width: 100%;
+    height: 80vh;
+    line-height: 80vh;
+    vertical-align: middle;
+    text-align: center;
 }
 
 .dg.main {
