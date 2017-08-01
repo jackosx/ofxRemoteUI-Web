@@ -220,10 +220,19 @@ function PresetFolder(guiRef, groupName) {
             this.presetFolder.add(this, "Delete Current");
         }
 
-        folderUL.childNodes.forEach(function(child){
-            child.style.flexGrow = "1";
-            child.style.minWidth = "60px";
-            child.style.whiteSpace = "nowrap";
+        folderUL.childNodes.forEach(function(item){
+            item.style.flexGrow = "1";
+            item.style.minWidth = "60px";
+            item.style.whiteSpace = "nowrap";
+            item.style.textAlign = "center";
+            if (item.className != "title"){
+                var content = item.firstChild;
+                if (item.classList.contains("function")){
+                    var content = content.firstChild;
+                }
+                content.style.width = "calc(100% - 4px)";
+            }
+
         })
 
     }
