@@ -53,10 +53,13 @@ function setupSocket(tryhost){
     };
 
     socket.onmessage = function(event) {
-        console.log('Received Message:', event.data);
         var osc = JSON.parse(event.data);
-        console.log(osc);
         var msgAction = getOscAddr(osc);
+
+        if (msgAction != "TEST") {
+            console.log("Received:", osc)
+        }
+
         var msgFnc = msgcFuncs[msgAction];
         msgFnc(osc);
     };
@@ -78,7 +81,9 @@ function setupSocket(tryhost){
 ///////////////////////////////////////////////////
 var paramVals  = {}; // need to store these
 var paramMetas = {}; // separately for dat.GUI
-var groups = [];
+var groups = [];     // list of dat.gui folders for param groups
+var presetFolder;
+
 
 var guiContainer = document.getElementById('controls');
 var placeholderControls = document.getElementById('controls-placeholder');
@@ -91,8 +96,8 @@ function createGUI() {
        gui.width = guiContainer.offsetWidth;
    })
    guiContainer.appendChild(gui.domElement);
+   presetFolder = new PresetFolder(gui);
 }
-
 
 
 function destroyGUI(){
@@ -105,6 +110,91 @@ function destroyGUI(){
     groups = [];
     placeholderControls.style.display = 'block';
 }
+
+///////////////////////////////////////////////////
+//                    Presets                    //
+///////////////////////////////////////////////////
+
+function PresetFolder(guiRef, groupName) {
+    var NO_SELECTION = "No Preset Selected";
+    this.presetFolder = guiRef.addFolder("Presets");
+    this.presetFolder.open();
+    this.presetNames = [NO_SELECTION];
+
+    this.groupName = (typeof type === 'undefined') ? "" : groupName;
+    this.sendSET = (this.groupName.length == 0) ? sendSETP
+                        : function(pName) { sendSETp(pName, this.groupName) };
+
+    this.sendSAV = (this.groupName.length == 0) ? sendSAVP
+                        : function(pName) { sendSAVp(pName, this.groupName) };
+
+    // adds the elements to the preset selection folder
+    this.updatePresetGUIFolder = function(){
+        for (var i = this.presetFolder.__controllers.length - 1; i >= 0; i--) {
+            console.log("Removing controller "+ i);
+            this.presetFolder.__controllers[i].remove();
+        }
+        this.presetFolder.add(this, "Selected Preset", this.presetNames)
+                .onFinishChange(this.sendSET);
+        this.presetFolder.add(this, "Create");
+        this.presetFolder.add(this, "Update Current");
+    }
+
+    this.createPreset = function() {
+        var presetName;
+        while (true) {
+            presetName = prompt("Name this preset:", "Preset " + this.presetNames.length);
+            if (this.presetNames.includes(presetName)) {
+                alert("There is already a preset with this name.\nPlease choose a different one.");
+            }
+            else if (presetName == null || presetName == "") {
+                return;
+            }
+            else {
+                break;
+            }
+        }
+        this.presetNames.push(presetName);
+        this.selectedPreset(presetName);
+        this.updatePresetGUIFolder();
+        this.sendSAV(presetName);
+    }
+
+    // To be called when the user selects a new preset from the dropdown.
+    // We want to tell the server a new one was chosen
+    this.updatePreset = function() {
+        var selectedP = this.selectedPreset();
+        if (selectedP == NO_SELECTION) {
+            createPreset();
+        }
+        else {
+            sendSAVP(selectedP);
+        }
+    }
+
+
+    // Properties/functions to be controlled by dat.GUI
+    this["Create"] = this.createPreset;
+    this["Update Current"]  = this.updatePreset;
+    this["Selected Preset"] = NO_SELECTION;
+
+    // convenient getter/setter bc of annoying key
+    this.selectedPreset = function(sP) {
+         if (typeof sP !== 'undefined') this["Selected Preset"] = sP;
+         return this["Selected Preset"]
+     };
+
+     this.gotPresetList = function(pNames) {
+         if (pNames.length && pNames[0] != "NO_PRESETS_SAVED") {
+             this.presetNames = [NO_SELECTION].concat(pNames);
+             this.updatePresetGUIFolder();
+         }
+     }
+
+    this.updatePresetGUIFolder();
+}
+
+
 
 
 ///////////////////////////////////////////////////
@@ -173,11 +263,12 @@ function setLocalParamViaOsc(osc, type, name) {
 
     }
 
-    control.onFinishChange(function(val) {
-        paramMetas[name].osc.args[0] = val;
-        socket.send(JSON.stringify(paramMetas[name].osc));
-    });
-
+    if (control) {
+        control.onFinishChange(function(val) {
+            paramMetas[name].osc.args[0] = val;
+            socket.send(JSON.stringify(paramMetas[name].osc));
+        });
+    }
 }
 
 function receviedParam(data) {}
@@ -225,24 +316,35 @@ function gotTEST(osc) {
 function gotSEND(osc) {
     var headerPieces = getHeaderPieces(osc);
     var type = headerPieces[1];
-    if (type == "SPA") { // Its a new group
-        var newGroup = gui.addFolder(headerPieces[2]);
+    var name = headerPieces[2];
+    if (type == "SPA" && !gui.__folders[name]) { // Its a new group
+        var newGroup = gui.addFolder(name);
         newGroup.open();
         // TODO Colors
         groups.unshift(newGroup);
     }
     else {
-        setLocalParamViaOsc(osc, type, headerPieces[2]);
+        setLocalParamViaOsc(osc, type, name);
     }
+}
+
+function gotPREL(osc) {
+    console.log("PREL",osc);
+    var args = osc.args;
+    presetFolder.gotPresetList(args);
+}
+
+function gotSETP(osc) {
+    sendOSC("REQU");
 }
 
 var msgcFuncs = {
     "HELO" : gotHELO,
     "REQU" : gotREQU,
     "SEND" : gotSEND,
-    /*"PREL" : gotPREL,
+    "PREL" : gotPREL,
     "SETP" : gotSETP,
-    "MISP" : gotMISP,
+    /*"MISP" : gotMISP,
     "SAVP" : gotSAVP,
     "DELP" : gotDELP,
     "RESX" : gotRESX,
@@ -251,4 +353,21 @@ var msgcFuncs = {
     "DELp" : gotDELp,*/
     "TEST" : gotTEST,
     // "CIAO" : gotCIAO
+}
+
+
+function sendSAVP(newName) {
+    sendOSC("SAVP",[newName]);
+}
+
+function sendSETP(pName) {
+    sendOSC("SETP", [pName]);
+}
+
+function sendSETp(pName, groupName) {
+    sendOSC("SETp", [pName, groupName]);
+}
+
+function sendSAVp(pName, groupName) {
+    sendOSC("SAVp", [pName, groupName]);
 }
