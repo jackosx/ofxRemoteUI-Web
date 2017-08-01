@@ -25,9 +25,13 @@ body {
     display: flex;
     flex-direction: row;
     flex-wrap: wrap;
+
     justify-content: space-between;
+    @media all and (max-width:600px) {
+        justify-content: flex-end;
+    }
     align-items: center;
-    padding: 15px;
+    padding: 10px;
 
     $vertical-margin: 10px;
     margin-top: $vertical-margin;
@@ -35,8 +39,7 @@ body {
 
     .title {
         font-size:      2em;
-        padding-top:    .5em;
-        padding-bottom: .5em;
+        padding:    .5em;
         letter-spacing: 0.3em;
     }
 
@@ -44,7 +47,8 @@ body {
         box-sizing: border-box;
         border-color: white;
         text-align: right;
-        padding: 1em;
+        padding-top: 10px;
+        padding-bottom: 10px;
         background-color: $wells;
         height: 100%;
     }
@@ -83,11 +87,11 @@ body {
 
 
 #controls {
-  background-color: $wells;
   width:  100%;
 }
 
 #controls-placeholder {
+    background-color: $wells;
     width: 100%;
     height: 80vh;
     line-height: 80vh;

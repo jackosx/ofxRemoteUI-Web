@@ -117,16 +117,20 @@ function destroyGUI(){
 
 function PresetFolder(guiRef, groupName) {
     var NO_SELECTION = "No Preset Selected";
-    this.presetFolder = guiRef.addFolder("Presets");
+    var isMain = (typeof groupName === 'undefined');
+
+    this.presetFolder = guiRef.addFolder(isMain ? "Presets" : "group presets");
     this.presetFolder.open();
     this.presetNames = [NO_SELECTION];
 
-    this.groupName = (typeof type === 'undefined') ? "" : groupName;
-    this.sendSET = (this.groupName.length == 0) ? sendSETP
-                        : function(pName) { sendSETp(pName, this.groupName) };
+    this.groupName = (isMain) ? "" : groupName;
+    this.sendSET = (isMain) ? sendSETP : function(pName) { sendSETp(pName, groupName) };
+    this.sendSAV = (isMain) ? sendSAVP : function(pName) { sendSAVp(pName, groupName) };
 
-    this.sendSAV = (this.groupName.length == 0) ? sendSAVP
-                        : function(pName) { sendSAVp(pName, this.groupName) };
+    if (!isMain) {
+        var header = this.presetFolder.domElement.firstChild.firstChild;
+        header.style.backgroundColor = "#1c1c1c";
+    }
 
     // adds the elements to the preset selection folder
     this.updatePresetGUIFolder = function(){
@@ -165,10 +169,10 @@ function PresetFolder(guiRef, groupName) {
     this.updatePreset = function() {
         var selectedP = this.selectedPreset();
         if (selectedP == NO_SELECTION) {
-            createPreset();
+            this.createPreset();
         }
         else {
-            sendSAVP(selectedP);
+            this.sendSAV(selectedP);
         }
     }
 
@@ -319,8 +323,15 @@ function gotSEND(osc) {
     var name = headerPieces[2];
     if (type == "SPA" && !gui.__folders[name]) { // Its a new group
         var newGroup = gui.addFolder(name);
+        var headerStyle = newGroup.domElement.firstChild.firstChild.style;
+        headerStyle.fontSize = "1.2em";
+        headerStyle.height = "29px";
+        headerStyle.lineHeight = "29px";
+        headerStyle.textAlign = "center";
+        headerStyle.marginTop = "30px";
         newGroup.open();
-        // TODO Colors
+        newGroup.presetFolder = new PresetFolder(newGroup, name);
+        newGroup.presetFolder.presetFolder.close();
         groups.unshift(newGroup);
     }
     else {
@@ -331,11 +342,41 @@ function gotSEND(osc) {
 function gotPREL(osc) {
     console.log("PREL",osc);
     var args = osc.args;
-    presetFolder.gotPresetList(args);
+    var groupPresets = {};
+
+    var globalPresets = args.filter(function(pName){
+        var slashPos = pName.indexOf('/');
+        if (slashPos == -1)
+            return true;
+
+        var groupName = pName.substr(0, slashPos);
+        if (!groupPresets[groupName]) groupPresets[groupName] = [];
+        groupPresets[groupName].push(pName.substr(slashPos + 1)); // push group preset name after '/'
+        return false;
+    });
+
+    presetFolder.gotPresetList(globalPresets);
+
+    Object.keys(groupPresets).forEach(function(groupName) {
+        gui.__folders[groupName].presetFolder
+                .gotPresetList(groupPresets[groupName]);
+    })
+
 }
 
 function gotSETP(osc) {
     sendOSC("REQU");
+}
+function gotSETp(osc) {
+    sendOSC("REQU");
+}
+
+function gotSAVP(osc) {
+    // TODO
+}
+
+function gotSAVp(){
+    // TODO
 }
 
 var msgcFuncs = {
@@ -344,12 +385,14 @@ var msgcFuncs = {
     "SEND" : gotSEND,
     "PREL" : gotPREL,
     "SETP" : gotSETP,
+    "SETp" : gotSETp,
+    "SAVP" : gotSAVP,
+    "SAVp" : gotSAVp,
     /*"MISP" : gotMISP,
     "SAVP" : gotSAVP,
     "DELP" : gotDELP,
     "RESX" : gotRESX,
     "RESD" : gotRESD,
-    "SAVp" : gotSAVp,
     "DELp" : gotDELp,*/
     "TEST" : gotTEST,
     // "CIAO" : gotCIAO
@@ -360,14 +403,14 @@ function sendSAVP(newName) {
     sendOSC("SAVP",[newName]);
 }
 
+function sendSAVp(pName, groupName) {
+    sendOSC("SAVp", [pName, groupName]);
+}
+
 function sendSETP(pName) {
     sendOSC("SETP", [pName]);
 }
 
 function sendSETp(pName, groupName) {
     sendOSC("SETp", [pName, groupName]);
-}
-
-function sendSAVp(pName, groupName) {
-    sendOSC("SAVp", [pName, groupName]);
 }
