@@ -1,5 +1,5 @@
 ///////////////////////////////////////////////////
-//                     DOM                       //
+//         DOM and State/Host Management         //
 ///////////////////////////////////////////////////
 
 var form = document.getElementById("host-form");
@@ -11,18 +11,13 @@ form.addEventListener("submit", function(event) {
     setupSocket(input);
 });
 
-function setState(newState) {
-    state = newState;
-    if (state == 2) { // Connected
-        alertify.success("Connected to " + iStr(host));
-        createGUI();
-    }
-    if (state > 2) {
-        alertify.error(stateMap[state]);
-        destroyGUI();
-    }
-}
+window.onload = function() {
+    var lastGoodHost = getGoodHost();
+    if (lastGoodHost)
+        setupSocket(lastGoodHost);
+ };
 
+// HTML String Formatters
 function iStr(str) { return "<i>" + str + "</i>" }
 function bStr(str) { return "<b>" + str + "</b>" }
 
@@ -81,6 +76,64 @@ function setupSocket(tryhost){
     };
 }
 
+
+
+function setState(newState) {
+    var prevState = state;
+    state = newState;
+    if (state == 2) { // Connected
+        successfulConnect()
+    }
+    else if (prevState == 1 && state > 2 ) { // failed attempt to connect
+        failedConnect();
+    }
+    else if (state > 2  && prevState == 2) { // connection closed
+        successfulDisconnect();
+    }
+}
+
+function successfulConnect() {
+    hostField.value = host;
+    hostField.focus(); hostField.blur();
+    if (host == getGoodHost()) {
+        alertify.success("Connected to last known host: " + bStr(host));
+    }
+    else {
+        storeGoodHost(host);
+        alertify.success("Connected to " + bStr(host));
+    }
+    createGUI();
+}
+
+function successfulDisconnect() {
+    alertify.error(stateMap[state]);
+    destroyGUI();
+}
+
+function failedConnect() {
+    if (host == getGoodHost()) {
+        alertify.error("Connection to last good host failed.");
+        hostField.value = "";
+        eraseGoodHost();
+    }
+    else {
+        alertify.error("Could not connect: " + stateMap[state]);
+    }
+    hostField.focus();
+}
+
+// Local Storage Helpers
+function storeGoodHost(host) {
+    localStorage.setItem('goodHost', host);
+}
+
+function eraseGoodHost() {
+    localStorage.removeItem('goodHost');
+}
+
+function getGoodHost() {
+    return localStorage['goodHost'];
+}
 
 ///////////////////////////////////////////////////
 //                   Dat.GUI                     //
@@ -142,9 +195,9 @@ function PresetFolder(guiRef, groupName) {
     var header = this.presetFolder.domElement.firstChild.firstChild;
     header.style.width = "100%";
 
+    // lighter color for group preset headers
     if (!isMain) header.style.backgroundColor = "#1c1c1c";
 
-    // -- Public Function --
     // Redraws the Preset folder
     this.redrawPresetFolder = function(){
 
@@ -161,15 +214,18 @@ function PresetFolder(guiRef, groupName) {
         this.presetFolder.add(this, "Selected Preset", this.presetNames)
                 .onFinishChange(this.sendSET);
         this.presetFolder.add(this, "Create New");
+
         if (this.selectedPreset() !== NO_SELECTION) {
             this.presetFolder.add(this, "Update Current");
             this.presetFolder.add(this, "Delete Current");
         }
+
         folderUL.childNodes.forEach(function(child){
             child.style.flexGrow = "1";
             child.style.minWidth = "60px";
             child.style.whiteSpace = "nowrap";
         })
+
     }
 
     // Function linked to a button to create a new preset and send it to the server
