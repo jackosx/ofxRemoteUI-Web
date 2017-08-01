@@ -4,7 +4,6 @@
 
 var form = document.getElementById("host-form");
 var hostField = document.getElementById("host-field");
-var statusLabel = document.getElementById("status-label");
 form.addEventListener("submit", function(event) {
     event.preventDefault();
     document.activeElement.blur();
@@ -14,13 +13,20 @@ form.addEventListener("submit", function(event) {
 
 function setState(newState) {
     state = newState;
-    statusLabel.innerHTML = stateMap[state];
-    if (state == 2)
+    if (state == 2) { // Connected
+        alertify.success("Connected to " + iStr(host));
         createGUI();
+    }
     if (state > 2) {
+        alertify.error(stateMap[state]);
         destroyGUI();
     }
 }
+
+function iStr(str) { return "<i>" + str + "</i>" }
+function bStr(str) { return "<b>" + str + "</b>" }
+
+alertify.logPosition("bottom right");
 
 
 ///////////////////////////////////////////////////
@@ -126,24 +132,47 @@ function PresetFolder(guiRef, groupName) {
     this.groupName = (isMain) ? "" : groupName;
     this.sendSET = (isMain) ? sendSETP : function(pName) { sendSETp(pName, groupName) };
     this.sendSAV = (isMain) ? sendSAVP : function(pName) { sendSAVp(pName, groupName) };
+    this.sendDEL = (isMain) ? sendDELP : function(pName) { sendDELp(pName, groupName) };
 
-    if (!isMain) {
-        var header = this.presetFolder.domElement.firstChild.firstChild;
-        header.style.backgroundColor = "#1c1c1c";
-    }
+    //----Perform Styling----
+    var folderUL = this.presetFolder.domElement.firstChild;
+    folderUL.style.display = 'flex';
+    folderUL.style.flexWrap = 'wrap';
 
-    // adds the elements to the preset selection folder
-    this.updatePresetGUIFolder = function(){
+    var header = this.presetFolder.domElement.firstChild.firstChild;
+    header.style.width = "100%";
+
+    if (!isMain) header.style.backgroundColor = "#1c1c1c";
+
+    // -- Public Function --
+    // Redraws the Preset folder
+    this.redrawPresetFolder = function(){
+
         for (var i = this.presetFolder.__controllers.length - 1; i >= 0; i--) {
             console.log("Removing controller "+ i);
             this.presetFolder.__controllers[i].remove();
         }
+
+        if (isMain) {
+            this.presetFolder.add(this, "Load Code Defaults");
+            this.presetFolder.add(this, "Load Last XML");
+        }
+
         this.presetFolder.add(this, "Selected Preset", this.presetNames)
                 .onFinishChange(this.sendSET);
-        this.presetFolder.add(this, "Create");
-        this.presetFolder.add(this, "Update Current");
+        this.presetFolder.add(this, "Create New");
+        if (this.selectedPreset() !== NO_SELECTION) {
+            this.presetFolder.add(this, "Update Current");
+            this.presetFolder.add(this, "Delete Current");
+        }
+        folderUL.childNodes.forEach(function(child){
+            child.style.flexGrow = "1";
+            child.style.minWidth = "60px";
+            child.style.whiteSpace = "nowrap";
+        })
     }
 
+    // Function linked to a button to create a new preset and send it to the server
     this.createPreset = function() {
         var presetName;
         while (true) {
@@ -152,7 +181,7 @@ function PresetFolder(guiRef, groupName) {
                 alert("There is already a preset with this name.\nPlease choose a different one.");
             }
             else if (presetName == null || presetName == "") {
-                return;
+                return; // No input, cancel
             }
             else {
                 break;
@@ -160,7 +189,7 @@ function PresetFolder(guiRef, groupName) {
         }
         this.presetNames.push(presetName);
         this.selectedPreset(presetName);
-        this.updatePresetGUIFolder();
+        this.redrawPresetFolder();
         this.sendSAV(presetName);
     }
 
@@ -176,11 +205,35 @@ function PresetFolder(guiRef, groupName) {
         }
     }
 
+    this.deletePreset = function() {
+        var selectedP = this.selectedPreset();
+        if (selectedP == NO_SELECTION) {
+            console.error("Trying to delete non-existent preset");
+        }
+        else {
+            this.sendDEL(selectedP);
+            var toErase = this.presetNames.indexOf(selectedP);
+            if (toErase === -1)
+                console.error("Trying to delete non-existent preset");
+            else {
+                this.presetNames.splice(toErase, 1);
+                this.selectedPreset(NO_SELECTION);
+                this.redrawPresetFolder();
+            }
+        }
+    }
+
 
     // Properties/functions to be controlled by dat.GUI
-    this["Create"] = this.createPreset;
-    this["Update Current"]  = this.updatePreset;
+    this["Create New"] = this.createPreset;
+    this["Update Current"] = this.updatePreset;
+    this["Delete Current"] = this.deletePreset;
     this["Selected Preset"] = NO_SELECTION;
+
+    if (isMain) {
+        this["Load Last XML"] = function(){sendRESX()};
+        this["Load Code Defaults"] = function(){sendRESD()};
+    }
 
     // convenient getter/setter bc of annoying key
     this.selectedPreset = function(sP) {
@@ -188,14 +241,17 @@ function PresetFolder(guiRef, groupName) {
          return this["Selected Preset"]
      };
 
+     // -- Public Function --
+     // Call to update with a new preset list
      this.gotPresetList = function(pNames) {
          if (pNames.length && pNames[0] != "NO_PRESETS_SAVED") {
              this.presetNames = [NO_SELECTION].concat(pNames);
-             this.updatePresetGUIFolder();
+             this.redrawPresetFolder();
          }
      }
 
-    this.updatePresetGUIFolder();
+     // Draw the GUI for the first time to finish initialization
+    this.redrawPresetFolder();
 }
 
 
@@ -276,7 +332,7 @@ function setLocalParamViaOsc(osc, type, name) {
     if (!isNewParam) gui.updateDisplay();
 }
 
-function receviedParam(data) {}
+function requestRemoteParams() { sendOSC("REQU"); }
 
 /* Possible osc addresses: (see ofxRemoteUI.h)
 HELO    –   In Response to client HELO
@@ -366,18 +422,44 @@ function gotPREL(osc) {
 }
 
 function gotSETP(osc) {
-    sendOSC("REQU");
+    requestRemoteParams();
+    alertify.success("Loaded " + bStr(osc.args[0]));
 }
 function gotSETp(osc) {
-    sendOSC("REQU");
+    requestRemoteParams();
+    alertify.success(bStr(osc.args[1])
+        + " group loaded " + bStr(osc.args[0]))
 }
 
 function gotSAVP(osc) {
     // TODO
 }
 
-function gotSAVp(){
+function gotSAVp(osc){
     // TODO
+}
+
+function gotRESX(osc) {
+    alertify.success("Loaded last saved XML");
+    requestRemoteParams();
+}
+
+function gotRESD(osc) {
+    alertify.success("Loaded code defaults");
+    requestRemoteParams();
+}
+
+function gotCIAO(osc) {
+    alertify.log("Server says CIAO");
+}
+
+function gotDELP(osc) {
+    alertify.error("Deleted " + bStr(osc.args[0]) + " preset")
+}
+
+function gotDELp(osc) {
+    alertify.error("Deleted " + bStr(osc.args[0])
+        + " from " + bStr(osc.args[1]));
 }
 
 var msgcFuncs = {
@@ -389,28 +471,48 @@ var msgcFuncs = {
     "SETp" : gotSETp,
     "SAVP" : gotSAVP,
     "SAVp" : gotSAVp,
-    /*"MISP" : gotMISP,
+    // "MISP" : gotMISP,
     "DELP" : gotDELP,
     "RESX" : gotRESX,
     "RESD" : gotRESD,
-    "DELp" : gotDELp,*/
+    "DELp" : gotDELp,
     "TEST" : gotTEST,
-    // "CIAO" : gotCIAO
+    "CIAO" : gotCIAO
 }
 
 
+// Save a global preset
 function sendSAVP(newName) {
     sendOSC("SAVP",[newName]);
 }
 
+// Save a group preset
 function sendSAVp(pName, groupName) {
     sendOSC("SAVp", [pName, groupName]);
 }
 
+// Set a global preset
 function sendSETP(pName) {
     sendOSC("SETP", [pName]);
 }
 
+function sendDELP(pName) {
+    sendOSC("DELP", [pName]);
+}
+
+// Set a group preset
 function sendSETp(pName, groupName) {
     sendOSC("SETp", [pName, groupName]);
+}
+
+function sendDELp(pName, groupName) {
+    sendOSC("DELp", [pName, groupName]);
+}
+
+function sendRESD() {
+    sendOSC("RESD");
+}
+
+function sendRESX() {
+    sendOSC("RESX");
 }
