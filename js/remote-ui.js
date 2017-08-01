@@ -244,7 +244,7 @@ function setLocalParamViaOsc(osc, type, name) {
         paramInfo.min = parseFloat(args[1]);
         paramInfo.max = parseFloat(args[2]);
         if (isNewParam)
-            control = guiRef.add(paramVals, name, paramInfo.min, paramInfo.max).listen();
+            control = guiRef.add(paramVals, name, paramInfo.min, paramInfo.max)//.listen();
     }
     else if (type == "INT") {
         paramVals[name] = parseInt(paramVal);
@@ -273,6 +273,7 @@ function setLocalParamViaOsc(osc, type, name) {
             socket.send(JSON.stringify(paramMetas[name].osc));
         });
     }
+    if (!isNewParam) gui.updateDisplay();
 }
 
 function receviedParam(data) {}
@@ -389,7 +390,6 @@ var msgcFuncs = {
     "SAVP" : gotSAVP,
     "SAVp" : gotSAVp,
     /*"MISP" : gotMISP,
-    "SAVP" : gotSAVP,
     "DELP" : gotDELP,
     "RESX" : gotRESX,
     "RESD" : gotRESD,
