@@ -12,10 +12,31 @@ form.addEventListener("submit", function(event) {
 });
 
 window.onload = function() {
-    var lastGoodHost = getGoodHost();
+    debugger
+    var lastGoodHost = getRecentHost();
     if (lastGoodHost)
         setupSocket(lastGoodHost);
  };
+
+ new autoComplete({
+     selector: '#host-field',
+     minChars: 0,
+     delay: 200,
+     cache: false,
+     source: function(term, suggest){
+         term = term.toLowerCase();
+         var choices = getGoodHostRecords();
+         suggest(choices.filter(function(entry){
+             return ~entry.host.toLowerCase().indexOf(term)
+         }));
+     },
+     renderItem: function (record, search){
+        search = search.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+        var re = new RegExp("(" + search.split(' ').join('|') + ")", "gi");
+        return '<div class="autocomplete-suggestion" data-val="' + record.host + '">' + record.host.replace(re, "<b>$1</b>")
+                + '<div class="moment-ago">'+moment(record.date).fromNow()+'</div></div>';
+    }
+ });
 
 // HTML String Formatters
 function iStr(str) { return "<i>" + str + "</i>" }
@@ -93,15 +114,17 @@ function setState(newState) {
 }
 
 function successfulConnect() {
-    hostField.value = host;
-    hostField.focus(); hostField.blur();
-    if (host == getGoodHost()) {
+    hostField.value = host;             // on Safari the field needs
+    hostField.style.display = 'none';   // redraw or the placeholder sticks
+    hostField.style.display = 'block';
+
+    if (host == getRecentHost()) {
         alertify.success("Connected to last known host: " + bStr(host));
     }
     else {
-        storeGoodHost(host);
         alertify.success("Connected to " + bStr(host));
     }
+    saveGoodHost(host);
     createGUI();
 }
 
@@ -111,10 +134,11 @@ function successfulDisconnect() {
 }
 
 function failedConnect() {
-    if (host == getGoodHost()) {
+    var recent = getRecentHost();
+    if (host == getRecentHost()) {
         alertify.error("Connection to last good host failed.");
         hostField.value = "";
-        eraseGoodHost();
+        eraseGoodHost(host);
     }
     else {
         alertify.error("Could not connect: " + stateMap[state]);
@@ -123,16 +147,42 @@ function failedConnect() {
 }
 
 // Local Storage Helpers
-function storeGoodHost(host) {
-    localStorage.setItem('goodHost', host);
+function saveGoodHost(host) {
+    var goodHosts = getGoodHostRecords() || [];
+    goodHosts = goodHosts.filter(function(prevEntry) { return prevEntry.host != host })
+    var entry = {
+        "host" : host,
+        "date" : new Date()
+    }
+    goodHosts.unshift(entry);
+    localStorage.setItem('goodHosts', JSON.stringify(goodHosts));
 }
 
-function eraseGoodHost() {
-    localStorage.removeItem('goodHost');
+function eraseGoodHost(host) {
+    goodHosts = getGoodHostRecords().filter(function(prevEntry) { return prevEntry.host != host })
+    localStorage.setItem('goodHosts', JSON.stringify(goodHosts));
 }
 
-function getGoodHost() {
-    return localStorage['goodHost'];
+// Returns list of hosts successfully connected to where entries are:
+//        {
+//            host: hostname,
+//            date: date of last successful connection
+//        }
+function getGoodHostRecords() {
+    var storedString = localStorage['goodHosts'];
+    if (typeof storedString === 'undefined') storedString = '[]';
+    var goodHosts = JSON.parse(storedString);
+    return goodHosts;
+}
+
+// Returns a list of good hostnames only
+function getGoodHosts() {
+    return getGoodHostRecords().map(function(entry){ return entry.host });
+}
+
+// Returns the name of last host connected to
+function getRecentHost() {
+    return getGoodHosts()[0];
 }
 
 ///////////////////////////////////////////////////
