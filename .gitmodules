@@ -1,0 +1,3 @@
+[submodule "dat.gui"]
+	path = dat.gui
+	url = https://github.com/jackosx/dat.gui
