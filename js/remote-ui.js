@@ -1,9 +1,15 @@
 ///////////////////////////////////////////////////
-//         DOM and State/Host Management         //
+//                      DOM                      //
 ///////////////////////////////////////////////////
 
 var form = document.getElementById("host-form");
 var hostField = document.getElementById("host-field");
+var filterField = document.getElementById("filter-field");
+
+filterField.oninput = function(e) {
+    filterGroups(filterField.value);
+}
+
 form.addEventListener("submit", function(event) {
     event.preventDefault();
     document.activeElement.blur();
@@ -18,21 +24,22 @@ window.onload = function() {
         setupSocket(lastGoodHost);
  };
 
+// Setup autocomplete for the host field
  new autoComplete({
      selector: '#host-field',
      minChars: 0,
      delay: 200,
      cache: false,
-     source: function(term, suggest){
-         term = term.toLowerCase();
+     source: function(input, suggest){
+         input = input.toLowerCase();
          var choices = getGoodHostRecords();
          suggest(choices.filter(function(entry){
-             return ~entry.host.toLowerCase().indexOf(term)
+             return ~entry.host.toLowerCase().indexOf(input)
          }));
      },
-     renderItem: function (record, search){
-        search = search.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
-        var re = new RegExp("(" + search.split(' ').join('|') + ")", "gi");
+     renderItem: function (record, input){
+        input = input.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+        var re = new RegExp("(" + input.split(' ').join('|') + ")", "gi");
         return '<div class="autocomplete-suggestion" data-val="' + record.host + '">' + record.host.replace(re, "<b>$1</b>")
                 + '<div class="moment-ago">'+moment(record.date).fromNow()+'</div></div>';
     }
@@ -237,7 +244,7 @@ function PresetFolder(guiRef, groupName) {
     this.sendSAV = (isMain) ? sendSAVP : function(pName) { sendSAVp(pName, groupName) };
     this.sendDEL = (isMain) ? sendDELP : function(pName) { sendDELp(pName, groupName) };
 
-    //----Perform Styling----
+    //----Perform Styling that cant be done in CSS----
     var folderUL = this.presetFolder.domElement.firstChild;
     folderUL.style.display = 'flex';
     folderUL.style.flexWrap = 'wrap';
@@ -252,7 +259,6 @@ function PresetFolder(guiRef, groupName) {
     this.redrawPresetFolder = function(){
 
         for (var i = this.presetFolder.__controllers.length - 1; i >= 0; i--) {
-            console.log("Removing controller "+ i);
             this.presetFolder.__controllers[i].remove();
         }
 
@@ -369,7 +375,16 @@ function PresetFolder(guiRef, groupName) {
     this.redrawPresetFolder();
 }
 
+function filterGroups(str) {
+    if (!gui) return;
+    var search = new RegExp("(" + str.split(' ').join('|') + ")", "gi");
 
+    Object.keys(gui.__folders).forEach(function(name){
+        if (name == 'Presets') return;
+        var elt = gui.__folders[name].domElement;
+        elt.style.display = name.match(search) ? 'block' : 'none';
+    })
+}
 
 
 ///////////////////////////////////////////////////
@@ -495,6 +510,7 @@ function gotSEND(osc) {
     var name = headerPieces[2];
     if (type == "SPA" && !gui.__folders[name]) { // Its a new group
         var newGroup = gui.addFolder(name);
+        newGroup.domElement.classList.add("param-group");
         var headerStyle = newGroup.domElement.firstChild.firstChild.style;
         headerStyle.fontSize = "1.2em";
         headerStyle.height = "29px";

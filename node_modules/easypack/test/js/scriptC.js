@@ -1,0 +1,1 @@
+$('#c').text("Script C checking in");

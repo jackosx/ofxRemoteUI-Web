@@ -1,0 +1,1 @@
+$('#b').text("Script B checking in");
