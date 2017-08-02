@@ -13,6 +13,7 @@
     "tests"
   ],
   "dependencies": {
-    "alertifyjs": "^1.0.11"
+    "alertifyjs": "^1.0.11",
+    "moment": "^2.18.1"
   }
 }
