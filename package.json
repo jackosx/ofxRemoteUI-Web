@@ -1,0 +1,25 @@
+{
+  "name": "remoteui-sockets-node",
+  "version": "1.0.0",
+  "description": "Web Interface for ofxRemoteUI",
+  "main": "build.js",
+  "dependencies": {
+    "express": "^4.15.3",
+    "standalone-html": "^0.2.1",
+    "ws": "^3.1.0"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jackosx/ofxRemoteUI-Web.git"
+  },
+  "author": "Jack O'Shea",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/jackosx/ofxRemoteUI-Web/issues"
+  },
+  "homepage": "https://github.com/jackosx/ofxRemoteUI-Web#readme"
+}
