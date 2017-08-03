@@ -42,8 +42,8 @@ function makeCpp() {
 
             let cpp =
 `//Auto generated content.
-const unsigned POCO_CONTENT_SIZE = ${html.length/2};
-const unsigned char GEN_POCO_CONTENT[] = { ${chars} };`
+const unsigned RUI_WEB_BINARY_SIZE = ${html.length/2};
+const unsigned char RUI_WEB_BINARY[] = { ${chars} };`
 
             fs.writeFile(outputCppPath, cpp, (err) => {
                 if (err)
