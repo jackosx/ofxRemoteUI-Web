@@ -409,7 +409,17 @@ function getHeaderPieces(osc) {
     return osc.addr.split(' ');
 }
 
-// Update the values here in JS
+function getColorFromArgs(args) {
+    var back = args.length - 1;
+    return {
+        r : args[back - 4],
+        g : args[back - 3],
+        b : args[back - 2],
+        a : args[back - 1]
+    }
+}
+
+// Update this client's copy of the param values
 function setLocalParamViaOsc(osc, type, name) {
 
     if (typeof type === 'undefined') type = getHeaderPieces(osc)[1];
@@ -418,8 +428,9 @@ function setLocalParamViaOsc(osc, type, name) {
     var args = osc.args;
     var paramVal = args[0];
     var paramInfo = { "type" : type, "osc" : osc  };
-    var guiRef = (groups.length > 0) ? groups[0] : gui;
-    var control; // used to listen for value changes
+    var guiRef = gui.__folders[args[args.length-1]] || gui;
+    var color = getColorFromArgs(osc.args);
+    var control;
     var isNewParam = !(paramVals.hasOwnProperty(name));
 
     paramMetas[name] = paramInfo;
@@ -428,8 +439,9 @@ function setLocalParamViaOsc(osc, type, name) {
         paramVals[name] = parseFloat(paramVal);
         paramInfo.min = parseFloat(args[1]);
         paramInfo.max = parseFloat(args[2]);
+        // paramInfo.step = (paramInfo.max - paramInfo.min) / 100;
         if (isNewParam)
-            control = guiRef.add(paramVals, name, paramInfo.min, paramInfo.max)//.listen();
+            control = guiRef.add(paramVals, name, paramInfo.min, paramInfo.max, paramInfo.step)//.listen();
     }
     else if (type == "INT") {
         paramVals[name] = parseInt(paramVal);
@@ -462,24 +474,15 @@ function setLocalParamViaOsc(osc, type, name) {
             control = guiRef.add(paramVals, name, paramInfo.enumMap);
     }
     else if (type == "COL") {
-        paramVals[name] = [parseInt(args[0]), parseInt(args[1]), parseInt(args[2]), 1/2]//parseInt(args[3])/255]
+        var alpha =  parseFloat((parseInt(args[3]) / 255).toFixed(3));
+        paramVals[name] = [parseInt(args[0]), parseInt(args[1]), parseInt(args[2]), alpha]
         if (isNewParam)
             control = guiRef.addColor(paramVals, name);
     }
 
     if (control) {
-        control.onFinishChange(function(val) {
-            if (paramMetas[name].type == "ENU") val = parseInt(val);
-            if (paramMetas[name].type == "BOL") val = val ? 1 : 0;
-            paramMetas[name].osc.args[0] = val;
-            if (paramMetas[name].type == "COL"){
-                paramMetas[name].osc.args[0] = val[0];
-                paramMetas[name].osc.args[1] = val[1];
-                paramMetas[name].osc.args[2] = val[2];
-                paramMetas[name].osc.args[3] = val[3] * 255;
-            }
-            socket.send(JSON.stringify(paramMetas[name].osc));
-        });
+        control.onFinishChange(createParamSend(name));
+        control.__li.style.borderLeft = '3px solid rgba(' + color.r + ',' + color.g + ',' + color.b + ',' + color.a + ')';
     }
     if (!isNewParam) gui.updateDisplay();
 }
@@ -677,4 +680,21 @@ function sendRESD() {
 
 function sendRESX() {
     sendOSC("RESX");
+}
+
+// Manufacture a function that is used to update parameters on the server
+function createParamSend(name){
+    return function(val) {
+        if (paramMetas[name].type == "ENU") val = parseInt(val);
+        if (paramMetas[name].type == "BOL") val = val ? 1 : 0;
+        paramMetas[name].osc.args[0] = val;
+        if (paramMetas[name].type == "COL"){
+            if (typeof val === 'string') val = JSON.parse(val)
+            paramMetas[name].osc.args[0] = val[0];
+            paramMetas[name].osc.args[1] = val[1];
+            paramMetas[name].osc.args[2] = val[2];
+            paramMetas[name].osc.args[3] = val[3] * 255;
+        }
+        socket.send(JSON.stringify(paramMetas[name].osc));
+    }
 }
