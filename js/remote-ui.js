@@ -615,6 +615,15 @@ function gotDELp(osc) {
         + " from " + bStr(osc.args[1]));
 }
 
+function gotMISP(osc) {
+    var listStr = osc.args.reduce(function(acc, param, i, list) {
+            var bParam = bStr(param);
+            acc += (i == list.length-1) ? bParam : bParam + ', '
+            return acc
+    }, "")
+    alertify.error("Missing params: " + listStr);
+}
+
 var msgcFuncs = {
     "HELO" : gotHELO,
     "REQU" : gotREQU,
@@ -624,7 +633,7 @@ var msgcFuncs = {
     "SETp" : gotSETp,
     "SAVP" : gotSAVP,
     "SAVp" : gotSAVp,
-    // "MISP" : gotMISP,
+    "MISP" : gotMISP,
     "DELP" : gotDELP,
     "RESX" : gotRESX,
     "RESD" : gotRESD,
