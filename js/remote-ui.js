@@ -18,7 +18,6 @@ form.addEventListener("submit", function(event) {
 });
 
 window.onload = function() {
-    debugger
     var lastGoodHost = getRecentHost();
     if (lastGoodHost)
         setupSocket(lastGoodHost);
@@ -437,25 +436,48 @@ function setLocalParamViaOsc(osc, type, name) {
         paramInfo.min = parseInt(args[1]);
         paramInfo.max = parseInt(args[2]);
         if (isNewParam)
-            control = guiRef.add(paramVal, name, paramInfo.min, paramInfo.max).step(1);
+            control = guiRef.add(paramVals, name, paramInfo.min, paramInfo.max).step(1);
     }
     else if (type == "BOL") {
-        paramVals[name] = parseBool(paramVal);
-        guiRef.add
+        paramVals[name] = (paramVal == 0) ? false : true; // force true or false
+        if (isNewParam)
+            control = guiRef.add(paramVals, name);
     }
     else if (type == "STR") {
-
+        paramVals[name] = paramVal;
+        if (isNewParam)
+            control = guiRef.add(paramVals, name);
     }
     else if (type == "ENU") {
-
+        paramVals[name] = parseInt(paramVal);
+        var enumMin = parseInt(args[1]);
+        var enumMax = parseInt(args[2]);
+        var enumMap = {};
+        for (var i = enumMin; i <= enumMax; i++) {
+            var enumName = args[3 + i - enumMin];
+            enumMap[enumName] = i;
+        }
+        paramInfo.enumMap = enumMap;
+        if (isNewParam)
+            control = guiRef.add(paramVals, name, paramInfo.enumMap);
     }
     else if (type == "COL") {
-
+        paramVals[name] = [parseInt(args[0]), parseInt(args[1]), parseInt(args[2]), 1/2]//parseInt(args[3])/255]
+        if (isNewParam)
+            control = guiRef.addColor(paramVals, name);
     }
 
     if (control) {
         control.onFinishChange(function(val) {
+            if (paramMetas[name].type == "ENU") val = parseInt(val);
+            if (paramMetas[name].type == "BOL") val = val ? 1 : 0;
             paramMetas[name].osc.args[0] = val;
+            if (paramMetas[name].type == "COL"){
+                paramMetas[name].osc.args[0] = val[0];
+                paramMetas[name].osc.args[1] = val[1];
+                paramMetas[name].osc.args[2] = val[2];
+                paramMetas[name].osc.args[3] = val[3] * 255;
+            }
             socket.send(JSON.stringify(paramMetas[name].osc));
         });
     }
