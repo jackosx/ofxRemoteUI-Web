@@ -1,8 +1,10 @@
 @import "./normalize";
 
+$mobile-size: 550px;
+
 $side-spacing: 30px;
 
-$back:  #303030;
+$back:  #121212;
 $wells: #202020;
 
 $success: #33aa33;
@@ -10,12 +12,11 @@ $error: #aa3333;
 
 body {
   background-color: $back;
-  color:            #fafafa;
-  margin-left:      $side-spacing;
-  margin-right:     $side-spacing;
-  font-family:      "Helvetica";
-  font-weight:      300;
-  font-size:        16px;
+  color:       #fafafa;
+  margin:      12px;
+  font-family: "Helvetica";
+  font-weight: 300;
+  font-size:   16px;
 }
 
 
@@ -27,57 +28,21 @@ body {
     flex-wrap: wrap;
 
     justify-content: space-between;
-    @media all and (max-width:600px) {
+    @media all and (max-width:$mobile-size) {
         justify-content: flex-end;
     }
 
     align-items: center;
-    padding: 15px;
+    padding: 7px;
 
-    $vertical-margin: 10px;
-    margin-top: $vertical-margin;
-    margin-bottom: $vertical-margin;
 
     .title {
-        font-size:      2em;
-        padding: 10px;
+        font-size: 2em;
         letter-spacing: 0.3em;
-    }
-
-    .status-box {
-        box-sizing: border-box;
-        border-color: white;
-        text-align: right;
-        background-color: $wells;
-        height: 100%;
-    }
-
-    .status-label {
-        border-radius: 3px;
-        padding: 15px;
-    }
-
-    .mark {
-        padding: .4em;
-        width: .8em;
-        height: .8em;
-        font-size: 1em;
-        text-align: center;
-        border-radius: 1em;
-        color: $wells;
-        display: inline-block;
-    }
-
-    .check {
-        background-color: $success;
-    }
-
-    .x {
-        background-color: $error;
+        padding: 3px;
     }
 
     #host-field {
-        margin-top: 10px;
         padding: 3px;
     }
 
