@@ -631,11 +631,11 @@ function gotSETp(osc) {
 }
 
 function gotSAVP(osc) {
-    // TODO
+    alertify.success("Saved " + bStr(osc.args[0]));
 }
 
 function gotSAVp(osc){
-    // TODO
+    alertify.success("Saved " + bStr(osc.args[0]) + " for " + bStr(osc.args[1]));
 }
 
 function gotRESX(osc) {
