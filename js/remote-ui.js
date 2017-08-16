@@ -6,10 +6,12 @@ var form = document.getElementById("host-form");
 var hostField = document.getElementById("host-field");
 var filterField = document.getElementById("filter-field");
 
+// Filter param groups as user types in filter field
 filterField.oninput = function(e) {
     filterGroups(filterField.value);
 }
 
+// Connect to socket on hostfield enter
 form.addEventListener("submit", function(event) {
     event.preventDefault();
     document.activeElement.blur();
@@ -17,6 +19,7 @@ form.addEventListener("submit", function(event) {
     setupSocket(input);
 });
 
+// Attempt to connect to most recent good host on page load
 window.onload = function() {
     var lastGoodHost = getRecentHost();
     if (lastGoodHost)
@@ -36,6 +39,8 @@ window.onload = function() {
              return ~entry.host.toLowerCase().indexOf(input)
          }));
      },
+
+     // record: { host: hostname, date: date of most recent connection}
      renderItem: function (record, input){
         input = input.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
         var re = new RegExp("(" + input.split(' ').join('|') + ")", "gi");
@@ -120,7 +125,7 @@ function setState(newState) {
 }
 
 function successfulConnect() {
-    hostField.value = host;             // on Safari the field needs
+    hostField.value = host;             // on Safari the field needs this for
     hostField.style.display = 'none';   // redraw or the placeholder sticks
     hostField.style.display = 'block';
 
@@ -144,35 +149,59 @@ function failedConnect() {
     if (host == getRecentHost()) {
         alertify.error("Connection to last good host failed.");
         hostField.value = "";
-        eraseGoodHost(host);
     }
     else {
         alertify.error("Could not connect: " + stateMap[state]);
     }
+    recordHostFailure(host);
+    removeBadHosts();
     hostField.focus();
 }
 
 // Local Storage Helpers
-function saveGoodHost(host) {
+//---------------------
+
+// Create a record of a good host in localStorage
+function saveGoodHost(hostname) {
     var goodHosts = getGoodHostRecords() || [];
-    goodHosts = goodHosts.filter(function(prevEntry) { return prevEntry.host != host })
+    goodHosts = goodHosts.filter(function(prevEntry) { return prevEntry.host != hostname })
     var entry = {
-        "host" : host,
-        "date" : new Date()
+        "host" : hostname,
+        "date" : new Date(),
+        "failures" : 0
     }
     goodHosts.unshift(entry);
     localStorage.setItem('goodHosts', JSON.stringify(goodHosts));
 }
 
-function eraseGoodHost(host) {
-    goodHosts = getGoodHostRecords().filter(function(prevEntry) { return prevEntry.host != host })
+// Erase the record of a known host from localStorage
+function eraseGoodHost(hostname) {
+    var goodHosts = getGoodHostRecords().filter(function(prevEntry) { return prevEntry.host != hostname })
+    localStorage.setItem('goodHosts', JSON.stringify(goodHosts));
+}
+
+// Increment the failure count of a host record
+function recordHostFailure(hostname) {
+    var hosts = getGoodHostRecords()
+    hosts.forEach(function(record){
+        if (record.host == hostname) {
+            record.failures++
+        }
+    })
+    localStorage.setItem('goodHosts', JSON.stringify(hosts));
+}
+
+// Remove records of hosts with high failure counts
+function removeBadHosts() {
+    goodHosts = getGoodHostRecords().filter(function(prevEntry) { return prevEntry.failures < 5 })
     localStorage.setItem('goodHosts', JSON.stringify(goodHosts));
 }
 
 // Returns list of hosts successfully connected to where entries are:
 //        {
 //            host: hostname,
-//            date: date of last successful connection
+//            date: date of last successful connection,
+//            failures: count of failed connections since last successful
 //        }
 function getGoodHostRecords() {
     var storedString = localStorage['goodHosts'];
@@ -190,6 +219,11 @@ function getGoodHosts() {
 function getRecentHost() {
     return getGoodHosts()[0];
 }
+
+function getRecentHostRecord() {
+    return getGoodHostRecords()[0];
+}
+
 
 ///////////////////////////////////////////////////
 //                   Dat.GUI                     //
@@ -571,7 +605,8 @@ function gotPREL(osc) {
     presetFolder.gotPresetList(globalPresets);
 
     Object.keys(groupPresets).forEach(function(groupName) {
-        gui.__folders[groupName].presetFolder
+        if (gui.__folders[groupName])
+            gui.__folders[groupName].presetFolder
                 .gotPresetList(groupPresets[groupName]);
     })
 
