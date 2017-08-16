@@ -435,14 +435,22 @@ function sendOSC(addr, args) {
     socket.send(JSON.stringify(createOsc(addr, args)));
 }
 
+// Assuming OSC Message arrive in this format:
+// {
+//    addr: "/ADDR some other info"
+//    args: "the data"
+// }
+// Return the "ADDR"
 function getOscAddr(osc) {
     return osc.addr.substr(1,4);
 }
 
+// The address of OSC messages sometimes contains space delimited info
 function getHeaderPieces(osc) {
     return osc.addr.split(' ');
 }
 
+// RGBA color values are the last 4 elts of param OSC message args
 function getColorFromArgs(args) {
     var back = args.length - 1;
     return {
@@ -534,8 +542,8 @@ SAVP    –   Save current params as preset
 DELP    -   Delete a preset
 RESX    -   Reset to default XML values
 RESD    –   Reset to code defaults (pre-RUI invocation)
-SAVp    -   Save a preset, different from SAVP ? ? ?
-DELp    -   Delete a preset, diffent from DELP ? ? ?
+SAVp    -   Save a group preset
+DELp    -   Delete a group preset
 TEST    -   Part of ping-pong keep alive exchange
 CIAO    -   Signal disconnect
 */
@@ -547,11 +555,11 @@ function gotHELO(osc) {
     sendOSC("REQU");
 }
 
-// Should receive a message like { addr : "/REQU OK"} to signal end of params
+// Should receive a message like { addr : "/REQU OK"} to signal end of param transmission
 function gotREQU(osc) {
     var headerPieces = osc.addr.split(' ');
     if (headerPieces.length == 2 || headerPieces[1] == "OK") {
-        // TODO Great, we got all the params
+        // Great, we got all the params
     }
     else {
         // UH-OH
@@ -687,26 +695,26 @@ function sendSAVP(newName) {
 }
 
 // Save a group preset
-function sendSAVp(pName, groupName) {
-    sendOSC("SAVp", [pName, groupName]);
+function sendSAVp(presetName, groupName) {
+    sendOSC("SAVp", [presetName, groupName]);
 }
 
 // Set a global preset
-function sendSETP(pName) {
-    sendOSC("SETP", [pName]);
+function sendSETP(presetName) {
+    sendOSC("SETP", [presetName]);
 }
 
-function sendDELP(pName) {
-    sendOSC("DELP", [pName]);
+function sendDELP(presetName) {
+    sendOSC("DELP", [presetName]);
 }
 
 // Set a group preset
-function sendSETp(pName, groupName) {
-    sendOSC("SETp", [pName, groupName]);
+function sendSETp(presetName, groupName) {
+    sendOSC("SETp", [presetName, groupName]);
 }
 
-function sendDELp(pName, groupName) {
-    sendOSC("DELp", [pName, groupName]);
+function sendDELp(presetName, groupName) {
+    sendOSC("DELp", [presetName, groupName]);
 }
 
 function sendRESD() {
