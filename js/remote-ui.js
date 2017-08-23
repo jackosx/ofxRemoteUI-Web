@@ -16,6 +16,13 @@ form.addEventListener("submit", function(event) {
     event.preventDefault();
     document.activeElement.blur();
     var input = hostField.value;
+    if (state == 1) {
+        alertify.error("Already trying to connect to a socket");
+        return;
+    }
+    else if (state == 2) {
+        socket.close();
+    }
     setupSocket(input);
 });
 
@@ -54,6 +61,47 @@ function iStr(str) { return "<i>" + str + "</i>" }
 function bStr(str) { return "<b>" + str + "</b>" }
 
 alertify.logPosition("bottom right");
+
+
+//----Log-----
+var logContainer = document.getElementById("log");
+var logEntries = document.getElementById("log-entries");
+var logUpdateInterval;
+
+function clearLogEntries() {
+    logEntries.innerHTML = "";
+}
+
+function showLog() {
+    logContainer.style.display = 'block';
+    logUpdateInterval = setInterval(updateLogTimestamps, 5000);
+    createLogEntry("Testing this thingy");
+    createLogEntry("One more")
+}
+
+function hideLog() {
+    logContainer.style.display = 'none';
+    clearInterval(logUpdateInterval);
+}
+
+function createLogEntry(msg) {
+    var now = new Date();
+    var newEntry = '<div class="log-entry" data-time="'+now+'">'
+                        + timestampDiv(now)
+                        + '<div class="entry-text">' + msg + '</div>'
+                    + '</div>';
+    logEntries.innerHTML = newEntry + logEntries.innerHTML;
+}
+
+function timestampDiv(time) { return '<div class="timestamp">'+moment(time).fromNow()+'</div>'}
+
+function updateLogTimestamps() {
+    logEntries.childNodes.forEach(function(entry) {
+            var time = entry.dataset.time;
+            entry.firstChild.innerHTML = moment(time).fromNow();
+    })
+}
+
 
 
 ///////////////////////////////////////////////////
@@ -142,6 +190,7 @@ function successfulConnect() {
 function successfulDisconnect() {
     alertify.error(stateMap[state]);
     destroyGUI();
+    clearLogEntries();
 }
 
 function failedConnect() {
@@ -244,8 +293,10 @@ function createGUI() {
    window.addEventListener("resize", function() {
        gui.width = guiContainer.offsetWidth;
    })
-   guiContainer.appendChild(gui.domElement);
+   guiContainer.insertBefore(gui.domElement, logContainer);
+   showLog();
    presetFolder = new PresetFolder(gui);
+
 }
 
 
@@ -257,6 +308,7 @@ function destroyGUI(){
     paramVals = {};
     paramMetas = {};
     groups = [];
+    hideLog();
     placeholderControls.style.display = 'block';
 }
 
@@ -670,6 +722,12 @@ function gotMISP(osc) {
     alertify.error("Missing params: " + listStr);
 }
 
+function gotLOG_(osc) {
+    var msg = osc.args[0];
+    alertify.log(bStr("Log: ") + msg);
+    createLogEntry(msg);
+}
+
 var msgcFuncs = {
     "HELO" : gotHELO,
     "REQU" : gotREQU,
@@ -685,7 +743,8 @@ var msgcFuncs = {
     "RESD" : gotRESD,
     "DELp" : gotDELp,
     "TEST" : gotTEST,
-    "CIAO" : gotCIAO
+    "CIAO" : gotCIAO,
+    "LOG_" : gotLOG_
 }
 
 

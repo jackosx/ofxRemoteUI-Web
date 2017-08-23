@@ -78,7 +78,12 @@ input {
 }
 
 .dg.main {
-  width: 100%;
+    width: 100%;
+}
+
+// Hide the dat.GUI collapse controls button
+.close-bottom {
+    display: none;
 }
 
 .autocomplete-suggestion{
@@ -89,4 +94,44 @@ input {
     font-size: 0.75em;
     line-height: 0.9em;
     color: grey;
+}
+
+#log {
+
+    margin-top: 10px;
+
+    #log-header {
+        $vert-padding: 6px;
+        padding-top:    $vert-padding;
+        padding-bottom: $vert-padding;
+        text-align: center;
+        background: black;
+        font-size: 14px;
+
+    }
+
+    #log-entries {
+        background-color: #1a1a1a;
+        border: solid 1px #2c2c2c;
+        border-top: none;
+        min-height: 1em;
+        padding: 5px;
+    }
+
+    .log-entry {
+        padding: 5px;
+    }
+
+    .timestamp {
+        font-size: 12px;
+        color: #757575;
+        margin-bottom: 3px;
+    }
+
+    .entry-text {
+        font-size: 12px;
+        line-height: 14px;
+
+    }
+
 }
