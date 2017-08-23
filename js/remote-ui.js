@@ -75,8 +75,6 @@ function clearLogEntries() {
 function showLog() {
     logContainer.style.display = 'block';
     logUpdateInterval = setInterval(updateLogTimestamps, 5000);
-    createLogEntry("Testing this thingy");
-    createLogEntry("One more")
 }
 
 function hideLog() {
