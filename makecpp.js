@@ -38,12 +38,13 @@ function makeCpp() {
                 i++;
                 chars += `${html[i]}`;
                 if (i != (html.length - 1)) chars += ',';
+                if(i%40 == 39) chars += '\n';
             }
 
             let cpp =
 `//Auto generated content.
 unsigned RUI_WEB_BINARY_SIZE = ${html.length/2};
-unsigned char RUI_WEB_BINARY_CONTENT[] = { ${chars} };`
+unsigned char RUI_WEB_BINARY_CONTENT[] = {\n${chars} };`
 
             fs.writeFile(outputCppPath, cpp, (err) => {
                 if (err)
