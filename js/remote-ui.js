@@ -573,7 +573,7 @@ function setLocalParamViaOsc(osc, type, name) {
     }
 
     if (control) {
-        control.onFinishChange(createParamSend(name));
+        control.onChange(createParamSend(name));
         control.__li.style.borderLeft = '3px solid rgba(' + color.r + ',' + color.g + ',' + color.b + ',' + color.a + ')';
     }
     if (!isNewParam) gui.updateDisplay();
