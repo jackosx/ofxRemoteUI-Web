@@ -42,9 +42,11 @@ function makeCpp() {
             }
 
             let cpp =
-`//Auto generated content.
+`// Auto generated content.
+# ifndef NO_RUI_WEBSERVER
 unsigned RUI_WEB_BINARY_SIZE = ${html.length/2};
-unsigned char RUI_WEB_BINARY_CONTENT[] = {\n${chars} };`
+unsigned char RUI_WEB_BINARY_CONTENT[] = {\n${chars} };
+#endif`
 
             fs.writeFile(outputCppPath, cpp, (err) => {
                 if (err)
