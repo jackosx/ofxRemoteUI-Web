@@ -1,6 +1,7 @@
 const standalone = require('standalone-html').api;
 const fs = require('fs');
 const zlib = require('zlib');
+const moment = require('moment');
 
 var regex = '[ ]'; //leave for standalone
 
@@ -40,9 +41,10 @@ function makeCpp() {
                 if (i != (html.length - 1)) chars += ',';
                 if(i%40 == 39) chars += '\n';
             }
-
+            let now = moment().format('MMMM Do YYYY, h:mm:ss a');
             let cpp =
-`// Auto generated content.
+`// Auto-generated on ${now}
+// View source at https://github.com/jackosx/ofxRemoteUI-Web
 # ifndef NO_RUI_WEBSERVER
 unsigned RUI_WEB_BINARY_SIZE = ${html.length/2};
 unsigned char RUI_WEB_BINARY_CONTENT[] = {\n${chars} };
