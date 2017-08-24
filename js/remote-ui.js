@@ -481,14 +481,28 @@ function PresetFolder(guiRef, groupName) {
     this.redrawPresetFolder();
 }
 
+// Make groups that don't match a search less visible
 function filterGroups(str) {
     if (!gui) return;
     var search = new RegExp("(" + str.split(' ').join('|') + ")", "gi");
 
-    Object.keys(gui.__folders).forEach(function(name){
+    Object.keys(gui.__folders).forEach(function(name){ // Iterate through groups
         if (name == 'Presets') return;
-        var elt = gui.__folders[name].domElement;
-        elt.style.display = name.match(search) ? 'block' : 'none';
+        var group = gui.__folders[name];
+        // Filter group headings
+        if (name.match(search)){
+            group.domElement.firstChild.firstChild.style.opacity = '1';
+            group.__folders["group presets"].domElement.style.opacity = '1';
+        }
+        else {
+            group.domElement.firstChild.firstChild.style.opacity = '0.25';
+            group.__folders["group presets"].domElement.style.opacity = '0.25';
+        }
+        // Filter individual param controllers
+        group.__controllers.forEach(function(controller){
+            var name = controller.property;
+            controller.__li.style.opacity = name.match(search) ? '1' : '0.2';
+        })
     })
 }
 
